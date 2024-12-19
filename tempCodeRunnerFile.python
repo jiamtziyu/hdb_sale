@@ -1,0 +1,5 @@
+import pandas as pd
+
+df = pd.read_csv("hdb_data_preprocessed.csv")
+
+print(df.head())
