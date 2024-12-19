@@ -6,7 +6,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # READING THE CSV FILE AND TIDYING UP
-df = pd.read_csv("hdb_data_preprocessed.csv.gz")
+df = pd.read_csv("hdb_data_preprocessed.csv.gz", compression='gzip')
 df['floor_area_sf'] = np.ceil(df['floor_area_sf'])
 df['resale_psf'] = np.ceil(df['resale_psf'])
 df['year'] = df['year'].astype(int)
@@ -172,8 +172,9 @@ with st.container():
                 # Directly display values in cells
                 text=[[f"{v:.1f}" for v in row]
                       for row in heatmap_data_cleaned.values],
-                hovertemplate="Year Bought: %{y}<br>Duration of Ownership: %{x}<br>Change: %{z:.2f}%"  # Customize hover template
- # Display 'text' as the hover information
+                # Customize hover template
+                hovertemplate="Year Bought: %{y}<br>Duration of Ownership: %{x}<br>Change: %{z:.2f}%"
+                # Display 'text' as the hover information
 
             )
         )
@@ -247,8 +248,9 @@ with st.container():
                 # Directly display values in cells
                 text=[[f"{v:.2f}" for v in row]
                       for row in heatmap_data_cleaned.values],
-                hovertemplate="Year Bought: %{y}<br>Duration of Ownership: %{x}<br>Annual Change: %{z:.2f}%"  # Customize hover template
-# Disable hover information as it's redundant
+                # Customize hover template
+                hovertemplate="Year Bought: %{y}<br>Duration of Ownership: %{x}<br>Annual Change: %{z:.2f}%"
+                # Disable hover information as it's redundant
             )
         )
 
