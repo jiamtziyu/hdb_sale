@@ -66,8 +66,69 @@ with st.container():
 
 # CHART SETTINGS
 smooth_window = 5
-chart_height = 600
+chart_height = 500
 xtick = 50000 if selected_chart_interest == "resale_price" else 50
+
+# QUICK FUN METRICS
+with st.container():
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    # Column for highest PSF
+    with col1:
+        tx_highest_psf = df_filter_year.loc[df_filter_year['resale_psf'].idxmax()]
+        highest_resale_psf_value = int(tx_highest_psf['resale_psf'])
+        st.metric(label='Highest PSF Sold',
+                  value=f"${highest_resale_psf_value}")
+        st.markdown(
+            f":orange[{tx_highest_psf['block']} {tx_highest_psf['street_name']}<br>"
+            f"{tx_highest_psf['flat_type']}, STOREY {tx_highest_psf['storey_range_bin']}<br>"
+            f"Sold at ${tx_highest_psf['resale_price']:,.0f} on {tx_highest_psf['year']}-{tx_highest_psf['month']}]",
+            unsafe_allow_html=True
+        )
+
+
+    # Column for lowest PSF
+    with col2:
+        tx_lowest_psf = df_filter_year.loc[df_filter_year['resale_psf'].idxmin()]
+        lowest_resale_psf_value = int(tx_lowest_psf['resale_psf'])
+        st.metric(label='Lowest PSF Sold',
+                  value=f"${lowest_resale_psf_value}")
+        st.markdown(
+            f":orange[{tx_lowest_psf['block']} {tx_lowest_psf['street_name']}<br>"
+            f"{tx_lowest_psf['flat_type']}, STOREY {tx_lowest_psf['storey_range_bin']}<br>"
+            f"Sold at ${tx_lowest_psf['resale_price']:,.0f} on {tx_lowest_psf['year']}-{tx_lowest_psf['month']}]",
+            unsafe_allow_html=True
+        )
+
+    num_year = end_year - start_year + 1
+    town_counts = df['town'].value_counts()
+
+    with col3:
+        most_common_town = town_counts.idxmax()
+        most_common_count = town_counts.max()
+
+        st.metric(label='Most Transactions/Year',
+                value=f"{int(most_common_count/num_year)}",)
+        st.markdown(
+            f":orange[{most_common_town}]",
+            unsafe_allow_html=True
+        )
+
+
+    with col4:
+        town_counts = df['town'].value_counts()
+        least_common_town = town_counts.idxmin()
+        least_common_count = town_counts.min()
+
+
+
+        st.metric(label='Least Transactions/Year',
+                value=f"{int(least_common_count/num_year)}",)
+        st.markdown(
+            f":orange[{least_common_town}]",
+            unsafe_allow_html=True
+        )
 
 # Price vs Time
 with st.container():
@@ -95,7 +156,7 @@ with st.container():
         y='median',
         labels={f"{selected_chart_interval}": 'Year',
                 'median': f"Median {selected_chart_interest}"},
-        title=f"HDB Median {selected_display_interest} (All)",
+        title=f"HDB Median {selected_display_interest}",
         height=chart_height
     )
 
@@ -117,6 +178,7 @@ with st.container():
     fig.update_layout(
         xaxis_title="",
         yaxis_title="",
+        xaxis=dict(tickmode='auto'),
         yaxis=dict(dtick=xtick),
         showlegend=False
     )
@@ -173,26 +235,19 @@ with st.container():
                 text=[[f"{v:.1f}" for v in row]
                       for row in heatmap_data_cleaned.values],
                 # Customize hover template
-                hovertemplate="Year Bought: %{y}<br>Duration of Ownership: %{x}<br>Change: %{z:.2f}%"
-                # Display 'text' as the hover information
-
-            )
+                hovertemplate="Year Bought: %{y}<br>Duration of Ownership: %{x} Years<br>Change: %{z:.2f}%")
         )
 
         fig.update_layout(
             title="Percentage Change in Resale Value Over Time",
             xaxis_title="Duration of Ownership",
             yaxis_title="Year Bought",
-            height=800,
+            height=chart_height,
             xaxis=dict(
-                tickmode='auto',  # Ensure every label is shown on the y-axis
                 # List of positions to show the ticks
                 tickvals=list(heatmap_data_cleaned.columns),
-                # Corresponding labels
-                ticktext=[f"{x}" for x in heatmap_data_cleaned.columns]
             ),
             yaxis=dict(
-                tickmode='auto',  # Ensure every label is shown on the y-axis
                 # List of positions to show the ticks
                 tickvals=list(heatmap_data_cleaned.index)
             ))
@@ -249,7 +304,7 @@ with st.container():
                 text=[[f"{v:.2f}" for v in row]
                       for row in heatmap_data_cleaned.values],
                 # Customize hover template
-                hovertemplate="Year Bought: %{y}<br>Duration of Ownership: %{x}<br>Annual Change: %{z:.2f}%"
+                hovertemplate="Year Bought: %{y}<br>Duration of Ownership: %{x} Years<br>Annual Change: %{z:.2f}%"
                 # Disable hover information as it's redundant
             )
         )
@@ -259,15 +314,12 @@ with st.container():
             title="Annualized Percentage Change in Resale Value Over Time",
             xaxis_title="Duration of Ownership",
             yaxis_title="Year Bought",
-            height=800,
+            height=chart_height,
             xaxis=dict(
                 # List of positions to show the ticks
                 tickvals=list(heatmap_data_cleaned.columns),
-                # Corresponding labels
-                ticktext=[str(x) for x in heatmap_data_cleaned.columns]
             ),
             yaxis=dict(
-                tickmode='auto',  # Ensure every label is shown on the y-axis
                 # List of positions to show the ticks
                 tickvals=list(heatmap_data_cleaned.index)
             )
@@ -359,34 +411,6 @@ with st.container():
 #     "flat_type == @flat_type & town == @town & lease_commence_bin == @lease_commence_bin"
 # )
 
-
-# df_selection['year_month'] = pd.to_datetime(
-#     df_selection['year_month'], format='%Y-%m-%d')
-# latest_month = df_selection['year_month'].max()
-# last_3_months = [(latest_month - pd.DateOffset(months=i)
-#                   ).strftime('%Y-%m-%d') for i in range(1, 4)]
-# last_6_months = [(latest_month - pd.DateOffset(months=i)
-#                   ).strftime('%Y-%m-%d') for i in range(1, 7)]
-# last_12_months = [(latest_month - pd.DateOffset(months=i)
-#                    ).strftime('%Y-%m-%d') for i in range(1, 13)]
-# last_5_years = [(latest_month - pd.DateOffset(months=i)
-#                  ).strftime('%Y-%m-%d') for i in range(1, 61)]
-# df_last_3_months = df_selection[df_selection['year_month'].dt.strftime(
-#     '%Y-%m-%d').isin(last_3_months)]
-# df_last_6_months = df_selection[df_selection['year_month'].dt.strftime(
-#     '%Y-%m-%d').isin(last_6_months)]
-# df_last_12_months = df_selection[df_selection['year_month'].dt.strftime(
-#     '%Y-%m-%d').isin(last_12_months)]
-# df_last_5_years = df_selection[df_selection['year_month'].dt.strftime(
-#     '%Y-%m-%d').isin(last_5_years)]
-# l3m_highest_psf = round(df_last_3_months['resale_psf'].max(), 1)
-# l3m_lowest_psf = round(df_last_3_months['resale_psf'].min(), 1)
-# l6m_highest_psf = round(df_last_6_months['resale_psf'].max(), 1)
-# l6m_lowest_psf = round(df_last_6_months['resale_psf'].min(), 1)
-# l12m_highest_psf = round(df_last_12_months['resale_psf'].max(), 1)
-# l12m_lowest_psf = round(df_last_12_months['resale_psf'].min(), 1)
-# l5y_highest_psf = round(df_last_5_years['resale_psf'].max(), 1)
-# l5y_lowest_psf = round(df_last_5_years['resale_psf'].min(), 1)
 
 # col_1, col_2, col_3, col_4 = st.columns(4)
 
