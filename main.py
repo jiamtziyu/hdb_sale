@@ -342,6 +342,7 @@ with st.container():
                    color="geographical_location",
                    height=chart_height)
     fig1.update_layout(
+        legend_title_text='',
         xaxis_title="",
         yaxis_title="",
         xaxis=dict(tickmode='auto'),
@@ -376,6 +377,7 @@ with st.container():
                        height=chart_height)
 
         fig1.update_layout(
+            legend_title_text='',
             xaxis_title="",
             yaxis_title="",
             xaxis=dict(tickmode='auto'),
@@ -404,6 +406,7 @@ with st.container():
                        height=chart_height)
 
         fig1.update_layout(
+            legend_title_text='',
             xaxis_title="",
             yaxis_title="",
             xaxis=dict(tickmode='auto'),
@@ -433,6 +436,7 @@ with st.container():
                        title=f"{location.upper()} REGION",
                        height=chart_height)
         fig1.update_layout(
+            legend_title_text='',
             xaxis_title="",
             yaxis_title="",
             xaxis=dict(tickmode='auto'),
@@ -460,6 +464,7 @@ with st.container():
                        title=f"{location.upper()} REGION",
                        height=chart_height)
         fig1.update_layout(
+            legend_title_text='',
             xaxis_title="",
             yaxis_title="",
             xaxis=dict(tickmode='auto'),
@@ -487,6 +492,7 @@ with st.container():
                        title=f"{location.upper()} REGION",
                        height=chart_height)
         fig1.update_layout(
+            legend_title_text='',
             xaxis_title="",
             yaxis_title="",
             xaxis=dict(tickmode='auto'),
