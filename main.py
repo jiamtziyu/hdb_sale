@@ -334,7 +334,7 @@ with st.container():
               anchor=None, help=None, divider=False)
 
     df_sub = df_filter_year.groupby([selected_chart_interval, 'geographical_location'])[
-        'resale_price'].median().reset_index()
+        selected_chart_interest].median().reset_index()
 
     fig1 = px.line(data_frame=df_sub,
                    x=selected_chart_interval,
