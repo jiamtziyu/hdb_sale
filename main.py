@@ -338,7 +338,7 @@ with st.container():
 
     fig1 = px.line(data_frame=df_sub,
                    x=selected_chart_interval,
-                   y="resale_price",
+                   y=selected_chart_interest,
                    color="geographical_location",
                    height=chart_height)
     fig1.update_layout(
