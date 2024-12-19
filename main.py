@@ -67,7 +67,7 @@ with st.container():
 # CHART SETTINGS
 smooth_window = 5
 chart_height = 500
-xtick = 50000 if selected_chart_interest == "resale_price" else 50
+ytick = 50000 if selected_chart_interest == "resale_price" else 50
 
 # QUICK FUN METRICS
 with st.container():
@@ -76,7 +76,8 @@ with st.container():
 
     # Column for highest PSF
     with col1:
-        tx_highest_psf = df_filter_year.loc[df_filter_year['resale_psf'].idxmax()]
+        tx_highest_psf = df_filter_year.loc[df_filter_year['resale_psf'].idxmax(
+        )]
         highest_resale_psf_value = int(tx_highest_psf['resale_psf'])
         st.metric(label='Highest PSF Sold',
                   value=f"${highest_resale_psf_value}")
@@ -87,10 +88,10 @@ with st.container():
             unsafe_allow_html=True
         )
 
-
     # Column for lowest PSF
     with col2:
-        tx_lowest_psf = df_filter_year.loc[df_filter_year['resale_psf'].idxmin()]
+        tx_lowest_psf = df_filter_year.loc[df_filter_year['resale_psf'].idxmin(
+        )]
         lowest_resale_psf_value = int(tx_lowest_psf['resale_psf'])
         st.metric(label='Lowest PSF Sold',
                   value=f"${lowest_resale_psf_value}")
@@ -109,22 +110,19 @@ with st.container():
         most_common_count = town_counts.max()
 
         st.metric(label='Most Transactions/Year',
-                value=f"{int(most_common_count/num_year)}",)
+                  value=f"{int(most_common_count/num_year)}",)
         st.markdown(
             f":orange[{most_common_town}]",
             unsafe_allow_html=True
         )
-
 
     with col4:
         town_counts = df['town'].value_counts()
         least_common_town = town_counts.idxmin()
         least_common_count = town_counts.min()
 
-
-
         st.metric(label='Least Transactions/Year',
-                value=f"{int(least_common_count/num_year)}",)
+                  value=f"{int(least_common_count/num_year)}",)
         st.markdown(
             f":orange[{least_common_town}]",
             unsafe_allow_html=True
@@ -179,7 +177,7 @@ with st.container():
         xaxis_title="",
         yaxis_title="",
         xaxis=dict(tickmode='auto'),
-        yaxis=dict(dtick=xtick),
+        yaxis=dict(dtick=ytick),
         showlegend=False
     )
 
@@ -189,6 +187,9 @@ with st.container():
 
 # CAGR HEAT MAP
 with st.container():
+
+    st.header("Change in Resale Value Over Time",
+              anchor=None, help=None, divider=False)
 
     col1, col2 = st.columns(2)
 
@@ -239,7 +240,7 @@ with st.container():
         )
 
         fig.update_layout(
-            title="Percentage Change in Resale Value Over Time",
+            title="Percentage Change",
             xaxis_title="Duration of Ownership",
             yaxis_title="Year Bought",
             height=chart_height,
@@ -311,7 +312,7 @@ with st.container():
 
         # Custom Y-axis labels and values
         fig.update_layout(
-            title="Annualized Percentage Change in Resale Value Over Time",
+            title="Annualized Percentage Change",
             xaxis_title="Duration of Ownership",
             yaxis_title="Year Bought",
             height=chart_height,
@@ -328,76 +329,171 @@ with st.container():
         # Display in Streamlit
         st.plotly_chart(fig, use_container_width=True)
 
+with st.container():
+    st.header("Resale Value by Geographical Region",
+              anchor=None, help=None, divider=False)
 
-# col1, col2 = st.columns(2)
+    df_sub = df_filter_year.groupby([selected_chart_interval, 'geographical_location'])[
+        'resale_price'].median().reset_index()
 
-# with col1:
-#     df_sub = df_filter_year.groupby([chart_interval, 'geographical_location', 'town'])[
-#         'resale_price'].median().reset_index()
+    fig1 = px.line(data_frame=df_sub,
+                   x=selected_chart_interval,
+                   y="resale_price",
+                   color="geographical_location",
+                   height=chart_height)
+    fig1.update_layout(
+        xaxis_title="",
+        yaxis_title="",
+        xaxis=dict(tickmode='auto'),
+        yaxis=dict(dtick=ytick)
+    )
+    st.plotly_chart(fig1,
+                    use_container_width=True)
 
-#     unique_geographical_locations = df['geographical_location'].unique(
-#     ).tolist()
+    df_sub = df_filter_year.groupby([selected_chart_interval, 'geographical_location', 'town'])[
+        selected_chart_interest].median().reset_index()
 
-#     for location in unique_geographical_locations:
+    col1, col2 = st.columns(2)
 
-#         df_geo = df_sub[(df_sub["geographical_location"] == location)].copy()
+    with col1:
 
-#         # Apply rolling median for each town separately
-#         df_geo['resale_price'] = df_geo.groupby('town')['resale_price'].transform(
-#             lambda x: x.rolling(window=smooth_window, min_periods=1).median())
+        location = "North"
+        df_geo = df_sub[(df_sub["geographical_location"]
+                         == location)].copy()
 
-#         fig1 = px.line(data_frame=df_geo,
-#                        x=chart_interval,
-#                        y="resale_price",
-#                        labels={f"{chart_interval}": 'Year',
-#                                'resale_price': 'Resale Value', 'town': "Town"},
-#                        color="town",
-#                        title=f"Median Resale Value by Town ({location.upper()})",
-#                        height=chart_height)
+        # Apply rolling median for each town separately
+        df_geo[selected_chart_interest] = df_geo.groupby('town')[selected_chart_interest].transform(
+            lambda x: x.rolling(window=smooth_window, min_periods=1).median())
 
-#         st.plotly_chart(fig1,
-#                         use_container_width=True)
+        fig1 = px.line(data_frame=df_geo,
+                       x=selected_chart_interval,
+                       y=selected_chart_interest,
+                       labels={f"{selected_chart_interval}": 'Year',
+                               f'{selected_chart_interest}': 'Resale Value',
+                               'town': "Town"},
+                       color="town",
+                       title=f"{location.upper()} REGION",
+                       height=chart_height)
 
-# with col2:
+        fig1.update_layout(
+            xaxis_title="",
+            yaxis_title="",
+            xaxis=dict(tickmode='auto'),
+            yaxis=dict(dtick=ytick)
+        )
+        st.plotly_chart(fig1,
+                        use_container_width=True)
 
-#     df_sub = df_filter_year.groupby([chart_interval, 'geographical_location'])[
-#         'resale_price'].median().reset_index()
+    with col2:
+        location = "North-East"
+        df_geo = df_sub[(df_sub["geographical_location"]
+                         == location)].copy()
 
-#     fig1 = px.line(data_frame=df_sub,
-#                    x=chart_interval,
-#                    y="resale_price",
-#                    color="geographical_location",
-#                    title="Median Resale Price by Geographical Location",
-#                    height=chart_height)
+        # Apply rolling median for each town separately
+        df_geo[selected_chart_interest] = df_geo.groupby('town')[selected_chart_interest].transform(
+            lambda x: x.rolling(window=smooth_window, min_periods=1).median())
 
-#     st.plotly_chart(fig1,
-#                     use_container_width=True)
+        fig1 = px.line(data_frame=df_geo,
+                       x=selected_chart_interval,
+                       y=selected_chart_interest,
+                       labels={f"{selected_chart_interval}": 'Year',
+                               f"{selected_chart_interest}": 'Resale Value',
+                               'town': "Town"},
+                       color="town",
+                       title=f"{location.upper()} REGION",
+                       height=chart_height)
 
-#     df_sub = df_filter_year.groupby([chart_interval, 'storey_range_bin'])[
-#         'resale_price'].median().reset_index()
+        fig1.update_layout(
+            xaxis_title="",
+            yaxis_title="",
+            xaxis=dict(tickmode='auto'),
+            yaxis=dict(dtick=ytick)
+        )
+        st.plotly_chart(fig1,
+                        use_container_width=True)
 
-#     fig1 = px.line(data_frame=df_sub,
-#                    x=chart_interval,
-#                    y="resale_price",
-#                    color="storey_range_bin",
-#                    title="Median Resale Price by Storey Range",
-#                    height=chart_height)
+    col1, col2, col3 = st.columns(3)
+    with col1:
 
-#     st.plotly_chart(fig1,
-#                     use_container_width=True)
+        location = "West"
+        df_geo = df_sub[(df_sub["geographical_location"]
+                         == location)].copy()
 
-#     df_sub = df_filter_year.groupby([chart_interval, 'estate_type'])[
-#         'resale_price'].median().reset_index()
+        # Apply rolling median for each town separately
+        df_geo[selected_chart_interest] = df_geo.groupby('town')[selected_chart_interest].transform(
+            lambda x: x.rolling(window=smooth_window, min_periods=1).median())
 
-#     fig1 = px.line(data_frame=df_sub,
-#                    x=chart_interval,
-#                    y="resale_price",
-#                    color="estate_type",
-#                    title="Median Resale Price by Estate",
-#                    height=chart_height)
+        fig1 = px.line(data_frame=df_geo,
+                       x=selected_chart_interval,
+                       y=selected_chart_interest,
+                       labels={f"{selected_chart_interval}": 'Year',
+                               f'{selected_chart_interest}': 'Resale Value',
+                               'town': "Town"},
+                       color="town",
+                       title=f"{location.upper()} REGION",
+                       height=chart_height)
+        fig1.update_layout(
+            xaxis_title="",
+            yaxis_title="",
+            xaxis=dict(tickmode='auto'),
+            yaxis=dict(dtick=ytick)
+        )
+        st.plotly_chart(fig1,
+                        use_container_width=True)
+    with col2:
 
-#     st.plotly_chart(fig1,
-#                     use_container_width=True)
+        location = "Central"
+        df_geo = df_sub[(df_sub["geographical_location"]
+                         == location)].copy()
+
+        # Apply rolling median for each town separately
+        df_geo[selected_chart_interest] = df_geo.groupby('town')[selected_chart_interest].transform(
+            lambda x: x.rolling(window=smooth_window, min_periods=1).median())
+
+        fig1 = px.line(data_frame=df_geo,
+                       x=selected_chart_interval,
+                       y=selected_chart_interest,
+                       labels={f"{selected_chart_interval}": 'Year',
+                               f'{selected_chart_interest}': 'Resale Value',
+                               'town': "Town"},
+                       color="town",
+                       title=f"{location.upper()} REGION",
+                       height=chart_height)
+        fig1.update_layout(
+            xaxis_title="",
+            yaxis_title="",
+            xaxis=dict(tickmode='auto'),
+            yaxis=dict(dtick=ytick)
+        )
+        st.plotly_chart(fig1,
+                        use_container_width=True)
+    with col3:
+
+        location = "East"
+        df_geo = df_sub[(df_sub["geographical_location"]
+                         == location)].copy()
+
+        # Apply rolling median for each town separately
+        df_geo[selected_chart_interest] = df_geo.groupby('town')[selected_chart_interest].transform(
+            lambda x: x.rolling(window=smooth_window, min_periods=1).median())
+
+        fig1 = px.line(data_frame=df_geo,
+                       x=selected_chart_interval,
+                       y=selected_chart_interest,
+                       labels={f"{selected_chart_interval}": 'Year',
+                               f'{selected_chart_interest}': 'Resale Value',
+                               'town': "Town"},
+                       color="town",
+                       title=f"{location.upper()} REGION",
+                       height=chart_height)
+        fig1.update_layout(
+            xaxis_title="",
+            yaxis_title="",
+            xaxis=dict(tickmode='auto'),
+            yaxis=dict(dtick=ytick)
+        )
+        st.plotly_chart(fig1,
+                        use_container_width=True)
 
 
 # flat_type = st.sidebar.multiselect(label="Select Flat Type",
@@ -437,6 +533,37 @@ with st.container():
 #               l5y_highest_psf)
 #     st.metric("L5Y Lowest PSF ($)",
 #               l5y_lowest_psf)
+
+
+# TO SEE STOREY
+# df_sub = df_filter_year.groupby([selected_chart_interval, 'storey_range_bin'])[
+#     'resale_price'].median().reset_index()
+
+# fig1 = px.line(data_frame=df_sub,
+#             x=selected_chart_interval,
+#             y="resale_price",
+#             color="storey_range_bin",
+#             title="Median Resale Price by Storey Range",
+#             height=chart_height)
+
+# st.plotly_chart(fig1,
+#                 use_container_width=True)
+
+# df_sub = df_filter_year.groupby([selected_chart_interval, 'estate_type'])[
+#     'resale_price'].median().reset_index()
+
+# fig1 = px.line(data_frame=df_sub,
+#             x=selected_chart_interval,
+#             y="resale_price",
+#             color="estate_type",
+#             title="Median Resale Price by Estate",
+#             height=chart_height)
+
+# fig1.update_layout(showlegend=True, legend_title_text='')
+
+
+# st.plotly_chart(fig1,
+#                 use_container_width=True)
 
 # For user to see
 with st.expander("View Data"):
