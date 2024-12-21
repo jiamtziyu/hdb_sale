@@ -596,7 +596,7 @@ with st.container():
         yaxis_title="",
         xaxis=dict(tickmode='auto'),
         yaxis=dict(dtick=ytick if selected_display_change ==
-                   "Absolute" else 10),
+                   "Absolute" else 20),
         legend=dict(
             orientation="h",  # Horizontal legend
             yanchor="top",    # Align the top of the legend box
