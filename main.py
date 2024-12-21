@@ -81,7 +81,7 @@ ytick = 50000 if selected_chart_interest == "resale_price" else 50
 # QUICK FUN METRICS
 with st.container():
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4 = st.columns([1, 2, 1, 2])
 
     # Column for highest PSF
     with col1:
@@ -90,54 +90,30 @@ with st.container():
         highest_resale_psf_value = int(tx_highest_psf['resale_psf'])
         st.metric(label='Highest PSF Sold',
                   value=f"${highest_resale_psf_value}")
-        st.markdown(
-            f":orange[{tx_highest_psf['block']} {tx_highest_psf['street_name']}<br>"
-            f"{tx_highest_psf['flat_type']}, STOREY {tx_highest_psf['storey_range_bin']}<br>"
-            f"Sold at ${tx_highest_psf['resale_price']:,.0f} on {tx_highest_psf['year']}-{tx_highest_psf['month']}]",
-            unsafe_allow_html=True
-        )
 
     # Column for lowest PSF
     with col2:
+        st.markdown(
+            f":orange[{tx_highest_psf['flat_type']}, {tx_highest_psf['block']} {tx_highest_psf['street_name']}, STOREY {tx_highest_psf['storey_range_bin']}<br>"
+            f"Transacted at ${tx_highest_psf['resale_price']:,.0f} on {tx_highest_psf['year']}-{tx_highest_psf['month']}]",
+            unsafe_allow_html=True
+        )
+
+    with col3:
         tx_lowest_psf = df_filter_year.loc[df_filter_year['resale_psf'].idxmin(
         )]
         lowest_resale_psf_value = int(tx_lowest_psf['resale_psf'])
         st.metric(label='Lowest PSF Sold',
                   value=f"${lowest_resale_psf_value}")
-        st.markdown(
-            f":orange[{tx_lowest_psf['block']} {tx_lowest_psf['street_name']}<br>"
-            f"{tx_lowest_psf['flat_type']}, STOREY {tx_lowest_psf['storey_range_bin']}<br>"
-            f"Sold at ${tx_lowest_psf['resale_price']:,.0f} on {tx_lowest_psf['year']}-{tx_lowest_psf['month']}]",
-            unsafe_allow_html=True
-        )
-
-    num_year = end_year - start_year + 1
-    town_counts = df['town'].value_counts()
-
-    with col3:
-        most_common_town = town_counts.idxmax()
-        most_common_count = town_counts.max()
-
-        st.metric(label='Most Transactions/Year',
-                  value=f"{int(most_common_count/num_year)}",)
-        st.markdown(
-            f":orange[{most_common_town}]",
-            unsafe_allow_html=True
-        )
 
     with col4:
-        town_counts = df['town'].value_counts()
-        least_common_town = town_counts.idxmin()
-        least_common_count = town_counts.min()
-
-        st.metric(label='Least Transactions/Year',
-                  value=f"{int(least_common_count/num_year)}",)
         st.markdown(
-            f":orange[{least_common_town}]",
+            f":orange[{tx_lowest_psf['flat_type']}, {tx_lowest_psf['block']} {tx_lowest_psf['street_name']}, STOREY {tx_lowest_psf['storey_range_bin']}<br>"
+            f"Transacted at ${tx_lowest_psf['resale_price']:,.0f} on {tx_lowest_psf['year']}-{tx_lowest_psf['month']}]",
             unsafe_allow_html=True
         )
 
-# Price vs Time
+        # Price vs Time
 with st.container():
 
     # Group the data and calculate Q1, Median, and Q3
@@ -202,6 +178,245 @@ with st.container():
 
     # Show the chart in Streamlit
     st.plotly_chart(fig, use_container_width=True)
+
+    # Group data to calculate the median of the selected metric for each hierarchy level
+    treemap_data = df_filter_year.groupby(
+        by=["geographical_location", "town", "flat_type"]
+    )[selected_chart_interest].median().reset_index()
+
+    # Create the treemap with improved labels and hover information
+    fig1 = px.treemap(
+        data_frame=treemap_data,
+        path=["geographical_location", "town",
+              "flat_type"],  # Hierarchical structure
+        values=selected_chart_interest,  # Values represented by box sizes
+        # Format hover data to include commas
+        hover_data={selected_chart_interest: ':,.0f'},
+        title=f"Median {selected_display_interest} by Geographical Location, Town, and Flat Type",
+        height=chart_height * 2,  # Increase height for better visibility
+    )
+
+    # Update traces for improved readability
+    fig1.update_traces(
+        textinfo="label+value",  # Display both labels and values directly on the boxes
+        hovertemplate="<b>%{label}</b><br>"  # Customize hover text template
+        + f"Median {selected_display_interest}: $%{{value:,.0f}}<br>"
+        + "Click for details"
+    )
+
+    # Customize layout for clarity
+    fig1.update_layout(
+        margin=dict(t=50, l=10, r=10, b=10),  # Adjust margins for a clean look
+    )
+
+    # Display the treemap in Streamlit
+    st.plotly_chart(fig1, use_container_width=True)
+
+st.divider()
+
+with st.container():
+
+    number = 50
+
+    st.header("Top Ranking",
+              anchor=None, help=None, divider=False)
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.text('Price')
+        top_highest_prices = df_filter_year.nlargest(
+            number, 'resale_price').reset_index(drop=True)
+
+        columns_to_display = ['town', 'flat_type', 'resale_price', 'resale_psf',
+                              'block', 'street_name', 'storey_range', 'remaining_lease']
+
+        # Rearrange and filter the DataFrame
+        rearranged_df = top_highest_prices[columns_to_display]
+        rearranged_df.index = rearranged_df.index + 1
+
+        st.dataframe(rearranged_df,
+                     height=210,
+                     use_container_width=True)
+
+    with col2:
+        st.text('PSF')
+
+        top_highest_psfs = df_filter_year.nlargest(
+            number, 'resale_psf').reset_index(drop=True)
+
+        columns_to_display = ['town', 'flat_type', 'resale_psf', 'resale_price',
+                              'block', 'street_name', 'storey_range', 'remaining_lease']
+
+        # Rearrange and filter the DataFrame
+        rearranged_df = top_highest_psfs[columns_to_display]
+        rearranged_df.index = rearranged_df.index + 1
+
+        st.dataframe(rearranged_df,
+                     height=210,
+                     use_container_width=True)
+
+    with col3:
+        st.text("Volume")
+
+        volume_by_town_flat_type = (
+            df_filter_year.groupby(['town', 'flat_type'])
+            .size()  # Count the occurrences
+            .reset_index(name='volume')  # Rename the count column to 'volume'
+        )
+
+        # Step 2: Sort the results by 'volume' in descending order
+        volume_by_town_flat_type_sorted = volume_by_town_flat_type.sort_values(
+            by='volume', ascending=False
+        )
+
+        # Step 3: Select the top 50 rows
+        top_50_volume = volume_by_town_flat_type_sorted.head(50)
+
+        # Optional: Reset the index for a cleaner display
+        top_50_volume = top_50_volume.reset_index(drop=True)
+        top_50_volume.index = top_50_volume.index + 1
+
+        # Step 4: Display in Streamlit
+        st.dataframe(top_50_volume,
+                     height=210,
+                     use_container_width=True)
+
+    with col4:
+        st.text("Price Change")
+
+        # Group by 'town' and 'flat_type', and get the first and last resale price for each group
+        price_change_by_town_flat_type = df_filter_year.groupby(['town', 'flat_type']).agg(
+            first_price=('resale_price', 'first'),
+            last_price=('resale_price', 'last')
+        ).reset_index()
+
+        # Calculate the percentage change between the first and last price
+        price_change_by_town_flat_type['percentage_change'] = (
+            (price_change_by_town_flat_type['last_price'] - price_change_by_town_flat_type['first_price']) / price_change_by_town_flat_type['first_price']) * 100
+
+        # Optionally: Handle cases where there is only one transaction (no price change to calculate)
+        price_change_by_town_flat_type['percentage_change'] = price_change_by_town_flat_type['percentage_change'].fillna(
+            0)  # Replace NaN with 0% change
+        price_change_by_town_flat_type['percentage_change'] = price_change_by_town_flat_type['percentage_change'].round(
+        ).astype(int)
+        # Sort by price change percentage (optional, if you want to see the largest change first)
+        price_change_by_town_flat_type_sorted = price_change_by_town_flat_type.sort_values(
+            by='percentage_change', ascending=False)
+
+        # Step 3: Select the top 50 rows
+        top_50_change = price_change_by_town_flat_type_sorted.head(50)
+
+        # Optional: Reset the index for a cleaner display
+        top_50_change = top_50_change.reset_index(drop=True)
+        top_50_change.index = top_50_change.index + 1
+
+        # Step 6: Display in Streamlit
+        st.dataframe(top_50_change[[
+            'town', 'flat_type', 'percentage_change']],
+            height=210,
+            use_container_width=True)
+
+    st.header("Bottom Ranking",
+              anchor=None, help=None, divider=False)
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.text('Price')
+        top_lowest_prices = df_filter_year.nsmallest(
+            number, 'resale_price').reset_index(drop=True)
+
+        columns_to_display = ['town', 'flat_type', 'resale_price', 'resale_psf',
+                              'block', 'street_name', 'storey_range', 'remaining_lease']
+
+        # Rearrange and filter the DataFrame
+        rearranged_df = top_lowest_prices[columns_to_display]
+        rearranged_df.index = rearranged_df.index + 1
+
+        st.dataframe(rearranged_df,
+                     height=210,
+                     use_container_width=True)
+
+    with col2:
+        st.text('PSF')
+
+        top_lowest_psfs = df_filter_year.nsmallest(
+            number, 'resale_psf').reset_index(drop=True)
+
+        columns_to_display = ['town', 'flat_type', 'resale_psf', 'resale_price',
+                              'block', 'street_name', 'storey_range', 'remaining_lease']
+
+        # Rearrange and filter the DataFrame
+        rearranged_df = top_lowest_psfs[columns_to_display]
+        rearranged_df.index = rearranged_df.index + 1
+
+        st.dataframe(rearranged_df,
+                     height=210,
+                     use_container_width=True)
+
+    with col3:
+        st.text("Volume")
+
+        volume_by_town_flat_type = (
+            df_filter_year.groupby(['town', 'flat_type'])
+            .size()  # Count the occurrences
+            .reset_index(name='volume')  # Rename the count column to 'volume'
+        )
+
+        # Step 2: Sort the results by 'volume' in descending order
+        volume_by_town_flat_type_sorted = volume_by_town_flat_type.sort_values(
+            by='volume', ascending=True
+        )
+
+        # Step 3: Select the top 50 rows
+        bottom_50_volume = volume_by_town_flat_type_sorted.head(50)
+
+        # Optional: Reset the index for a cleaner display
+        bottom_50_volume = bottom_50_volume.reset_index(drop=True)
+        bottom_50_volume.index = bottom_50_volume.index + 1
+
+        # Step 4: Display in Streamlit
+        st.dataframe(bottom_50_volume,
+                     height=210,
+                     use_container_width=True)
+
+    with col4:
+        st.text("Price Change")
+
+        # Group by 'town' and 'flat_type', and get the first and last resale price for each group
+        price_change_by_town_flat_type = df_filter_year.groupby(['town', 'flat_type']).agg(
+            first_price=('resale_price', 'first'),
+            last_price=('resale_price', 'last')
+        ).reset_index()
+
+        # Calculate the percentage change between the first and last price
+        price_change_by_town_flat_type['percentage_change'] = (
+            (price_change_by_town_flat_type['last_price'] - price_change_by_town_flat_type['first_price']) / price_change_by_town_flat_type['first_price']) * 100
+
+        # Optionally: Handle cases where there is only one transaction (no price change to calculate)
+        price_change_by_town_flat_type['percentage_change'] = price_change_by_town_flat_type['percentage_change'].fillna(
+            0)  # Replace NaN with 0% change
+        price_change_by_town_flat_type['percentage_change'] = price_change_by_town_flat_type['percentage_change'].round(
+        ).astype(int)
+        # Sort by price change percentage (optional, if you want to see the largest change first)
+        price_change_by_town_flat_type_sorted = price_change_by_town_flat_type.sort_values(
+            by='percentage_change', ascending=True)
+
+        # Step 3: Select the top 50 rows
+        bottom_50_change = price_change_by_town_flat_type_sorted.head(50)
+
+        # Optional: Reset the index for a cleaner display
+        bottom_50_change = bottom_50_change.reset_index(drop=True)
+        bottom_50_change.index = bottom_50_change.index + 1
+
+        # Step 6: Display in Streamlit
+        st.dataframe(bottom_50_change[[
+            'town', 'flat_type', 'percentage_change']],
+            height=210,
+            use_container_width=True)
+
+st.divider()
 
 
 # CAGR HEAT MAP
@@ -347,6 +562,8 @@ with st.container():
 
         # Display in Streamlit
         st.plotly_chart(fig, use_container_width=True)
+
+st.divider()
 
 with st.container():
     st.header("Resale Value by Geographical Region",
@@ -570,6 +787,7 @@ with st.container():
         st.plotly_chart(fig1,
                         use_container_width=True)
 
+st.divider()
 
 with st.container():
     st.header("Resale Value by Flat Type",
@@ -656,6 +874,8 @@ with st.container():
 
     st.plotly_chart(fig1, use_container_width=True)
 
+st.divider()
+
 with st.container():
     st.header("Resale Value by Lease Commence Year",
               anchor=None, help=None, divider=False)
@@ -692,6 +912,8 @@ with st.container():
 
     st.plotly_chart(fig1,
                     use_container_width=True)
+
+st.divider()
 
 
 with st.container():
@@ -731,75 +953,7 @@ with st.container():
     st.plotly_chart(fig1,
                     use_container_width=True)
 
-
-# flat_type = st.sidebar.multiselect(label="Select Flat Type",
-#                                    options=df['flat_type'].unique())
-# town = st.sidebar.multiselect(label="Select Town",
-#                               options=df['town'].unique())
-# lease_commence_bin = st.sidebar.multiselect(label="Select Lease Commence Bin",
-#                                             options=df['lease_commence_bin'].unique())
-
-# df_selection = df.query(
-#     "flat_type == @flat_type & town == @town & lease_commence_bin == @lease_commence_bin"
-# )
-
-
-# col_1, col_2, col_3, col_4 = st.columns(4)
-
-# with col_1:
-#     st.metric("L3M Highest PSF ($)",
-#               l3m_highest_psf)
-#     st.metric("L3M Lowest PSF ($)",
-#               l3m_lowest_psf)
-
-# with col_2:
-#     st.metric("L6M Highest PSF ($)",
-#               l6m_highest_psf)
-#     st.metric("L6M Lowest PSF ($)",
-#               l6m_lowest_psf)
-
-# with col_3:
-#     st.metric("L12M Highest PSF ($)",
-#               l12m_highest_psf)
-#     st.metric("L12M Lowest PSF ($)",
-#               l12m_lowest_psf)
-
-# with col_4:
-#     st.metric("L5Y Highest PSF ($)",
-#               l5y_highest_psf)
-#     st.metric("L5Y Lowest PSF ($)",
-#               l5y_lowest_psf)
-
-
-# TO SEE STOREY
-# df_sub = df_filter_year.groupby([selected_chart_interval, 'storey_range_bin'])[
-#     'resale_price'].median().reset_index()
-
-# fig1 = px.line(data_frame=df_sub,
-#             x=selected_chart_interval,
-#             y="resale_price",
-#             color="storey_range_bin",
-#             title="Median Resale Price by Storey Range",
-#             height=chart_height)
-
-# st.plotly_chart(fig1,
-#                 use_container_width=True)
-
-# df_sub = df_filter_year.groupby([selected_chart_interval, 'estate_type'])[
-#     'resale_price'].median().reset_index()
-
-# fig1 = px.line(data_frame=df_sub,
-#             x=selected_chart_interval,
-#             y="resale_price",
-#             color="estate_type",
-#             title="Median Resale Price by Estate",
-#             height=chart_height)
-
-# fig1.update_layout(showlegend=True, legend_title_text='')
-
-
-# st.plotly_chart(fig1,
-#                 use_container_width=True)
+st.divider()
 
 # For user to see
 with st.expander("View Data"):
