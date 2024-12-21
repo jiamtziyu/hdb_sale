@@ -221,7 +221,7 @@ with st.container():
     st.header("Top Ranking",
               anchor=None, help=None, divider=False)
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         st.text('Price')
@@ -229,7 +229,7 @@ with st.container():
             number, 'resale_price').reset_index(drop=True)
 
         columns_to_display = ['town', 'flat_type', 'resale_price', 'resale_psf',
-                              'block', 'street_name', 'storey_range', 'remaining_lease']
+                              'block', 'street_name', 'storey_range', 'remaining_lease', 'year_month']
 
         # Rearrange and filter the DataFrame
         rearranged_df = top_highest_prices[columns_to_display]
@@ -246,7 +246,7 @@ with st.container():
             number, 'resale_psf').reset_index(drop=True)
 
         columns_to_display = ['town', 'flat_type', 'resale_psf', 'resale_price',
-                              'block', 'street_name', 'storey_range', 'remaining_lease']
+                              'block', 'street_name', 'storey_range', 'remaining_lease', 'year_month']
 
         # Rearrange and filter the DataFrame
         rearranged_df = top_highest_psfs[columns_to_display]
@@ -271,7 +271,7 @@ with st.container():
         )
 
         # Step 3: Select the top 50 rows
-        top_50_volume = volume_by_town_flat_type_sorted.head(50)
+        top_50_volume = volume_by_town_flat_type_sorted.head(number)
 
         # Optional: Reset the index for a cleaner display
         top_50_volume = top_50_volume.reset_index(drop=True)
@@ -282,45 +282,10 @@ with st.container():
                      height=210,
                      use_container_width=True)
 
-    with col4:
-        st.text("Price Change")
-
-        # Group by 'town' and 'flat_type', and get the first and last resale price for each group
-        price_change_by_town_flat_type = df_filter_year.groupby(['town', 'flat_type']).agg(
-            first_price=('resale_price', 'first'),
-            last_price=('resale_price', 'last')
-        ).reset_index()
-
-        # Calculate the percentage change between the first and last price
-        price_change_by_town_flat_type['percentage_change'] = (
-            (price_change_by_town_flat_type['last_price'] - price_change_by_town_flat_type['first_price']) / price_change_by_town_flat_type['first_price']) * 100
-
-        # Optionally: Handle cases where there is only one transaction (no price change to calculate)
-        price_change_by_town_flat_type['percentage_change'] = price_change_by_town_flat_type['percentage_change'].fillna(
-            0)  # Replace NaN with 0% change
-        price_change_by_town_flat_type['percentage_change'] = price_change_by_town_flat_type['percentage_change'].round(
-        ).astype(int)
-        # Sort by price change percentage (optional, if you want to see the largest change first)
-        price_change_by_town_flat_type_sorted = price_change_by_town_flat_type.sort_values(
-            by='percentage_change', ascending=False)
-
-        # Step 3: Select the top 50 rows
-        top_50_change = price_change_by_town_flat_type_sorted.head(50)
-
-        # Optional: Reset the index for a cleaner display
-        top_50_change = top_50_change.reset_index(drop=True)
-        top_50_change.index = top_50_change.index + 1
-
-        # Step 6: Display in Streamlit
-        st.dataframe(top_50_change[[
-            'town', 'flat_type', 'percentage_change']],
-            height=210,
-            use_container_width=True)
-
     st.header("Bottom Ranking",
               anchor=None, help=None, divider=False)
 
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         st.text('Price')
@@ -328,7 +293,7 @@ with st.container():
             number, 'resale_price').reset_index(drop=True)
 
         columns_to_display = ['town', 'flat_type', 'resale_price', 'resale_psf',
-                              'block', 'street_name', 'storey_range', 'remaining_lease']
+                              'block', 'street_name', 'storey_range', 'remaining_lease', 'year_month']
 
         # Rearrange and filter the DataFrame
         rearranged_df = top_lowest_prices[columns_to_display]
@@ -345,7 +310,7 @@ with st.container():
             number, 'resale_psf').reset_index(drop=True)
 
         columns_to_display = ['town', 'flat_type', 'resale_psf', 'resale_price',
-                              'block', 'street_name', 'storey_range', 'remaining_lease']
+                              'block', 'street_name', 'storey_range', 'remaining_lease', 'year_month']
 
         # Rearrange and filter the DataFrame
         rearranged_df = top_lowest_psfs[columns_to_display]
@@ -370,7 +335,7 @@ with st.container():
         )
 
         # Step 3: Select the top 50 rows
-        bottom_50_volume = volume_by_town_flat_type_sorted.head(50)
+        bottom_50_volume = volume_by_town_flat_type_sorted.head(number)
 
         # Optional: Reset the index for a cleaner display
         bottom_50_volume = bottom_50_volume.reset_index(drop=True)
@@ -381,40 +346,6 @@ with st.container():
                      height=210,
                      use_container_width=True)
 
-    with col4:
-        st.text("Price Change")
-
-        # Group by 'town' and 'flat_type', and get the first and last resale price for each group
-        price_change_by_town_flat_type = df_filter_year.groupby(['town', 'flat_type']).agg(
-            first_price=('resale_price', 'first'),
-            last_price=('resale_price', 'last')
-        ).reset_index()
-
-        # Calculate the percentage change between the first and last price
-        price_change_by_town_flat_type['percentage_change'] = (
-            (price_change_by_town_flat_type['last_price'] - price_change_by_town_flat_type['first_price']) / price_change_by_town_flat_type['first_price']) * 100
-
-        # Optionally: Handle cases where there is only one transaction (no price change to calculate)
-        price_change_by_town_flat_type['percentage_change'] = price_change_by_town_flat_type['percentage_change'].fillna(
-            0)  # Replace NaN with 0% change
-        price_change_by_town_flat_type['percentage_change'] = price_change_by_town_flat_type['percentage_change'].round(
-        ).astype(int)
-        # Sort by price change percentage (optional, if you want to see the largest change first)
-        price_change_by_town_flat_type_sorted = price_change_by_town_flat_type.sort_values(
-            by='percentage_change', ascending=True)
-
-        # Step 3: Select the top 50 rows
-        bottom_50_change = price_change_by_town_flat_type_sorted.head(50)
-
-        # Optional: Reset the index for a cleaner display
-        bottom_50_change = bottom_50_change.reset_index(drop=True)
-        bottom_50_change.index = bottom_50_change.index + 1
-
-        # Step 6: Display in Streamlit
-        st.dataframe(bottom_50_change[[
-            'town', 'flat_type', 'percentage_change']],
-            height=210,
-            use_container_width=True)
 
 st.divider()
 
