@@ -23,7 +23,7 @@ st.divider()
 
 # USER CONFIGURATION
 with st.container():
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         interval_mapping = {
@@ -46,7 +46,7 @@ with st.container():
         selected_display_interest = st.selectbox(
             label="Select Interest",
             options=list(interest_mapping.keys()),
-            index=0
+            index=1
         )
         selected_chart_interest = interest_mapping[selected_display_interest]
 
@@ -57,13 +57,22 @@ with st.container():
         label_visibility="visible"
     )
 
+    with col3:
+        selected_display_change = st.selectbox(
+            label="Select Change",
+            options=['Relative', 'Absolute'],
+            index=0
+        )
+
     df_filter_year = df[(df['year'] >= start_year) & (df['year'] <= end_year)]
 
     latest_date = df_filter_year['year_month'].max()
     earliest_date = df_filter_year['year_month'].min()
 
-    st.text(f"{selected_display_interval} {selected_display_interest} data is selected between {earliest_date} and {latest_date}.")
-
+    st.markdown(f"{selected_display_interval} {selected_display_interest} data is selected between {earliest_date} and {latest_date}.<br>"
+                f"The charts will display :red[{selected_display_change.lower()}] change in :red[{selected_display_interest.lower()}].",
+                unsafe_allow_html=True)
+    st.divider()
 # CHART SETTINGS
 smooth_window = 5
 chart_height = 500
@@ -138,6 +147,15 @@ with st.container():
         q3=lambda x: x.quantile(0.75)
     ).reset_index()
 
+    if selected_display_change == 'Relative':
+        # Calculate relative percentage changes for Q1, Median, and Q3
+        df_stats['q1'] = (
+            (df_stats['q1'] - df_stats['q1'].iloc[0]) / df_stats['q1'].iloc[0]) * 100
+        df_stats['median'] = (
+            (df_stats['median'] - df_stats['median'].iloc[0]) / df_stats['median'].iloc[0]) * 100
+        df_stats['q3'] = (
+            (df_stats['q3'] - df_stats['q3'].iloc[0]) / df_stats['q3'].iloc[0]) * 100
+
     # Prepare data for shading (long format)
     df_area = pd.concat([
         df_stats[[selected_chart_interval, 'q1']].rename(
@@ -177,7 +195,8 @@ with st.container():
         xaxis_title="",
         yaxis_title="",
         xaxis=dict(tickmode='auto'),
-        yaxis=dict(dtick=ytick),
+        yaxis=dict(dtick=ytick if selected_display_change ==
+                   "Absolute" else 10),
         showlegend=False
     )
 
@@ -336,9 +355,15 @@ with st.container():
     df_sub = df_filter_year.groupby([selected_chart_interval, 'geographical_location'])[
         selected_chart_interest].median().reset_index()
 
+    if selected_display_change == "Relative":
+        # Compute relative percentage change for each geographical location
+        df_sub['relative_change'] = df_sub.groupby('geographical_location')[selected_chart_interest].transform(
+            lambda x: ((x - x.iloc[0]) / x.iloc[0]) * 100
+        )
+
     fig1 = px.line(data_frame=df_sub,
                    x=selected_chart_interval,
-                   y=selected_chart_interest,
+                   y=selected_chart_interest if selected_display_change == "Absolute" else "relative_change",
                    color="geographical_location",
                    height=chart_height)
     fig1.update_layout(
@@ -346,8 +371,17 @@ with st.container():
         xaxis_title="",
         yaxis_title="",
         xaxis=dict(tickmode='auto'),
-        yaxis=dict(dtick=ytick)
+        yaxis=dict(dtick=ytick if selected_display_change ==
+                   "Absolute" else 10),
+        legend=dict(
+            orientation="h",  # Horizontal legend
+            yanchor="top",    # Align the top of the legend box
+            y=1.1,           # Push it below the chart; adjust this value as needed
+            xanchor="center",  # Center the legend horizontally
+            x=0.5             # Position it at the center of the chart
+        ), margin=dict(b=50)     # Adjust bottom margin to ensure legend fits
     )
+
     st.plotly_chart(fig1,
                     use_container_width=True)
 
@@ -358,7 +392,7 @@ with st.container():
 
     with col1:
 
-        location = "North"
+        location = "Central"
         df_geo = df_sub[(df_sub["geographical_location"]
                          == location)].copy()
 
@@ -366,9 +400,15 @@ with st.container():
         df_geo[selected_chart_interest] = df_geo.groupby('town')[selected_chart_interest].transform(
             lambda x: x.rolling(window=smooth_window, min_periods=1).median())
 
+        if selected_display_change == "Relative":
+            # Compute relative percentage change for each geographical location
+            df_geo['relative_change'] = df_geo.groupby('town')[selected_chart_interest].transform(
+                lambda x: ((x - x.iloc[0]) / x.iloc[0]) * 100
+            )
+
         fig1 = px.line(data_frame=df_geo,
                        x=selected_chart_interval,
-                       y=selected_chart_interest,
+                       y=selected_chart_interest if selected_display_change == "Absolute" else "relative_change",
                        labels={f"{selected_chart_interval}": 'Year',
                                f'{selected_chart_interest}': 'Resale Value',
                                'town': "Town"},
@@ -381,13 +421,14 @@ with st.container():
             xaxis_title="",
             yaxis_title="",
             xaxis=dict(tickmode='auto'),
-            yaxis=dict(dtick=ytick)
+            yaxis=dict(dtick=ytick if selected_display_change ==
+                       "Absolute" else 10),
         )
         st.plotly_chart(fig1,
                         use_container_width=True)
 
     with col2:
-        location = "North-East"
+        location = "West"
         df_geo = df_sub[(df_sub["geographical_location"]
                          == location)].copy()
 
@@ -395,9 +436,15 @@ with st.container():
         df_geo[selected_chart_interest] = df_geo.groupby('town')[selected_chart_interest].transform(
             lambda x: x.rolling(window=smooth_window, min_periods=1).median())
 
+        if selected_display_change == "Relative":
+            # Compute relative percentage change for each geographical location
+            df_geo['relative_change'] = df_geo.groupby('town')[selected_chart_interest].transform(
+                lambda x: ((x - x.iloc[0]) / x.iloc[0]) * 100
+            )
+
         fig1 = px.line(data_frame=df_geo,
                        x=selected_chart_interval,
-                       y=selected_chart_interest,
+                       y=selected_chart_interest if selected_display_change == "Absolute" else "relative_change",
                        labels={f"{selected_chart_interval}": 'Year',
                                f"{selected_chart_interest}": 'Resale Value',
                                'town': "Town"},
@@ -410,7 +457,8 @@ with st.container():
             xaxis_title="",
             yaxis_title="",
             xaxis=dict(tickmode='auto'),
-            yaxis=dict(dtick=ytick)
+            yaxis=dict(dtick=ytick if selected_display_change ==
+                       "Absolute" else 10),
         )
         st.plotly_chart(fig1,
                         use_container_width=True)
@@ -418,7 +466,7 @@ with st.container():
     col1, col2, col3 = st.columns(3)
     with col1:
 
-        location = "West"
+        location = "North"
         df_geo = df_sub[(df_sub["geographical_location"]
                          == location)].copy()
 
@@ -426,9 +474,15 @@ with st.container():
         df_geo[selected_chart_interest] = df_geo.groupby('town')[selected_chart_interest].transform(
             lambda x: x.rolling(window=smooth_window, min_periods=1).median())
 
+        if selected_display_change == "Relative":
+            # Compute relative percentage change for each geographical location
+            df_geo['relative_change'] = df_geo.groupby('town')[selected_chart_interest].transform(
+                lambda x: ((x - x.iloc[0]) / x.iloc[0]) * 100
+            )
+
         fig1 = px.line(data_frame=df_geo,
                        x=selected_chart_interval,
-                       y=selected_chart_interest,
+                       y=selected_chart_interest if selected_display_change == "Absolute" else "relative_change",
                        labels={f"{selected_chart_interval}": 'Year',
                                f'{selected_chart_interest}': 'Resale Value',
                                'town': "Town"},
@@ -440,13 +494,14 @@ with st.container():
             xaxis_title="",
             yaxis_title="",
             xaxis=dict(tickmode='auto'),
-            yaxis=dict(dtick=ytick)
+            yaxis=dict(dtick=ytick if selected_display_change ==
+                       "Absolute" else 10),
         )
         st.plotly_chart(fig1,
                         use_container_width=True)
     with col2:
 
-        location = "Central"
+        location = "North-East"
         df_geo = df_sub[(df_sub["geographical_location"]
                          == location)].copy()
 
@@ -454,9 +509,15 @@ with st.container():
         df_geo[selected_chart_interest] = df_geo.groupby('town')[selected_chart_interest].transform(
             lambda x: x.rolling(window=smooth_window, min_periods=1).median())
 
+        if selected_display_change == "Relative":
+            # Compute relative percentage change for each geographical location
+            df_geo['relative_change'] = df_geo.groupby('town')[selected_chart_interest].transform(
+                lambda x: ((x - x.iloc[0]) / x.iloc[0]) * 100
+            )
+
         fig1 = px.line(data_frame=df_geo,
                        x=selected_chart_interval,
-                       y=selected_chart_interest,
+                       y=selected_chart_interest if selected_display_change == "Absolute" else "relative_change",
                        labels={f"{selected_chart_interval}": 'Year',
                                f'{selected_chart_interest}': 'Resale Value',
                                'town': "Town"},
@@ -468,7 +529,8 @@ with st.container():
             xaxis_title="",
             yaxis_title="",
             xaxis=dict(tickmode='auto'),
-            yaxis=dict(dtick=ytick)
+            yaxis=dict(dtick=ytick if selected_display_change ==
+                       "Absolute" else 10),
         )
         st.plotly_chart(fig1,
                         use_container_width=True)
@@ -482,9 +544,15 @@ with st.container():
         df_geo[selected_chart_interest] = df_geo.groupby('town')[selected_chart_interest].transform(
             lambda x: x.rolling(window=smooth_window, min_periods=1).median())
 
+        if selected_display_change == "Relative":
+            # Compute relative percentage change for each geographical location
+            df_geo['relative_change'] = df_geo.groupby('town')[selected_chart_interest].transform(
+                lambda x: ((x - x.iloc[0]) / x.iloc[0]) * 100
+            )
+
         fig1 = px.line(data_frame=df_geo,
                        x=selected_chart_interval,
-                       y=selected_chart_interest,
+                       y=selected_chart_interest if selected_display_change == "Absolute" else "relative_change",
                        labels={f"{selected_chart_interval}": 'Year',
                                f'{selected_chart_interest}': 'Resale Value',
                                'town': "Town"},
@@ -496,10 +564,88 @@ with st.container():
             xaxis_title="",
             yaxis_title="",
             xaxis=dict(tickmode='auto'),
-            yaxis=dict(dtick=ytick)
+            yaxis=dict(dtick=ytick if selected_display_change ==
+                       "Absolute" else 10),
         )
         st.plotly_chart(fig1,
                         use_container_width=True)
+        
+
+
+with st.container():
+    st.header("Resale Value by Flat Type",
+              anchor=None, help=None, divider=False)
+
+    df_sub = df_filter_year.groupby([selected_chart_interval, 'flat_type'])[
+        selected_chart_interest].median().reset_index()
+
+    if selected_display_change == "Relative":
+        # Compute relative percentage change for each geographical location
+        df_sub['relative_change'] = df_sub.groupby('flat_type')[selected_chart_interest].transform(
+            lambda x: ((x - x.iloc[0]) / x.iloc[0]) * 100
+        )
+
+    fig1 = px.line(data_frame=df_sub,
+                   x=selected_chart_interval,
+                   y=selected_chart_interest if selected_display_change == "Absolute" else "relative_change",
+                   color="flat_type",
+                   height=chart_height)
+    fig1.update_layout(
+        legend_title_text='',
+        xaxis_title="",
+        yaxis_title="",
+        xaxis=dict(tickmode='auto'),
+        yaxis=dict(dtick=ytick if selected_display_change ==
+                   "Absolute" else 10),
+        legend=dict(
+            orientation="h",  # Horizontal legend
+            yanchor="top",    # Align the top of the legend box
+            y=1.1,           # Push it below the chart; adjust this value as needed
+            xanchor="center",  # Center the legend horizontally
+            x=0.5             # Position it at the center of the chart
+        ), margin=dict(b=50)     # Adjust bottom margin to ensure legend fits
+    )
+
+    st.plotly_chart(fig1,
+                    use_container_width=True)
+
+with st.container():
+    st.header("Resale Value by Lease Commence Year",
+              anchor=None, help=None, divider=False)
+
+    df_sub = df_filter_year.groupby([selected_chart_interval, 'lease_commence_bin'])[
+        selected_chart_interest].median().reset_index()
+
+    if selected_display_change == "Relative":
+        # Compute relative percentage change
+        df_sub['relative_change'] = df_sub.groupby('lease_commence_bin')[selected_chart_interest].transform(
+            lambda x: ((x - x.iloc[0]) / x.iloc[0]) * 100
+        )
+
+    fig1 = px.line(data_frame=df_sub,
+                   x=selected_chart_interval,
+                   y=selected_chart_interest if selected_display_change == "Absolute" else "relative_change",
+                   color="lease_commence_bin",
+                   height=chart_height)
+    fig1.update_layout(
+        legend_title_text='',
+        xaxis_title="",
+        yaxis_title="",
+        xaxis=dict(tickmode='auto'),
+        yaxis=dict(dtick=ytick if selected_display_change ==
+                   "Absolute" else 10),
+        legend=dict(
+            orientation="h",  # Horizontal legend
+            yanchor="top",    # Align the top of the legend box
+            y=1.1,           # Push it below the chart; adjust this value as needed
+            xanchor="center",  # Center the legend horizontally
+            x=0.5             # Position it at the center of the chart
+        ), margin=dict(b=50)     # Adjust bottom margin to ensure legend fits
+    )
+
+    st.plotly_chart(fig1,
+                    use_container_width=True)
+
 
 
 # flat_type = st.sidebar.multiselect(label="Select Flat Type",
