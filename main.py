@@ -569,7 +569,6 @@ with st.container():
         )
         st.plotly_chart(fig1,
                         use_container_width=True)
-        
 
 
 with st.container():
@@ -609,6 +608,54 @@ with st.container():
     st.plotly_chart(fig1,
                     use_container_width=True)
 
+    # Update data filtering and aggregation to include 'flat_type'
+    df_sub = df_filter_year.groupby(
+        [selected_chart_interval, 'lease_commence_bin', 'flat_type']
+    )[selected_chart_interest].median().reset_index()
+
+    if selected_display_change == "Relative":
+        # Compute relative percentage change within each group of 'flat_type' and 'lease_commence_bin'
+        df_sub['relative_change'] = df_sub.groupby(['lease_commence_bin', 'flat_type'])[selected_chart_interest].transform(
+            lambda x: ((x - x.iloc[0]) / x.iloc[0]) * 100
+        )
+
+    fig1 = px.line(
+        data_frame=df_sub,
+        x=selected_chart_interval,
+        y=selected_chart_interest if selected_display_change == "Absolute" else "relative_change",
+        color="lease_commence_bin",  # Keep fewer lines in each facet
+        facet_col="flat_type",       # Separate panels for each flat_type
+        facet_col_wrap=4,            # Limit the number of columns
+        height=chart_height*2
+    )
+
+    fig1.for_each_annotation(lambda a: a.update(
+        text=a.text.split("=")[-1].strip()))
+
+    # Update y-ticks for all subplots
+    for axis in fig1.layout:
+        if axis.startswith("yaxis"):  # Check for all y-axes in the layout
+            fig1.layout[axis].dtick = ytick if selected_display_change == "Absolute" else 20
+        # Check for all x and y axes
+        if axis.startswith("xaxis") or axis.startswith("yaxis"):
+            fig1.layout[axis].title.text = ""  # Remove the title
+
+    fig1.update_layout(
+        legend_title_text='',
+        xaxis_title="",
+        yaxis_title="",
+        margin=dict(b=50),  # Adjust bottom margin
+        legend=dict(
+            orientation="h",  # Horizontal legend
+            yanchor="top",    # Align the top of the legend box
+            y=1.1,           # Push it below the chart; adjust this value as needed
+            xanchor="center",  # Center the legend horizontally
+            x=0.5             # Position it at the center of the chart
+        )
+    )
+
+    st.plotly_chart(fig1, use_container_width=True)
+
 with st.container():
     st.header("Resale Value by Lease Commence Year",
               anchor=None, help=None, divider=False)
@@ -646,6 +693,43 @@ with st.container():
     st.plotly_chart(fig1,
                     use_container_width=True)
 
+
+with st.container():
+    st.header("Resale Value by Storey",
+              anchor=None, help=None, divider=False)
+
+    df_sub = df_filter_year.groupby([selected_chart_interval, 'storey_range_bin'])[
+        selected_chart_interest].median().reset_index()
+
+    if selected_display_change == "Relative":
+        # Compute relative percentage change
+        df_sub['relative_change'] = df_sub.groupby('storey_range_bin')[selected_chart_interest].transform(
+            lambda x: ((x - x.iloc[0]) / x.iloc[0]) * 100
+        )
+
+    fig1 = px.line(data_frame=df_sub,
+                   x=selected_chart_interval,
+                   y=selected_chart_interest if selected_display_change == "Absolute" else "relative_change",
+                   color="storey_range_bin",
+                   height=chart_height)
+    fig1.update_layout(
+        legend_title_text='',
+        xaxis_title="",
+        yaxis_title="",
+        xaxis=dict(tickmode='auto'),
+        yaxis=dict(dtick=ytick if selected_display_change ==
+                   "Absolute" else 10),
+        legend=dict(
+            orientation="h",  # Horizontal legend
+            yanchor="top",    # Align the top of the legend box
+            y=1.1,           # Push it below the chart; adjust this value as needed
+            xanchor="center",  # Center the legend horizontally
+            x=0.5             # Position it at the center of the chart
+        ), margin=dict(b=50)     # Adjust bottom margin to ensure legend fits
+    )
+
+    st.plotly_chart(fig1,
+                    use_container_width=True)
 
 
 # flat_type = st.sidebar.multiselect(label="Select Flat Type",
@@ -731,38 +815,3 @@ with st.expander("View Data"):
     st.download_button('Download CSV File',
                        data=csv,
                        file_name="Resale_Prices_HDB.csv")
-
-
-# # Group by year_quarter and calculate Q1, Q3, and Median
-# stats = df.groupby("year_quarter")["resale_price"].agg(
-#     q1_price=lambda x: x.quantile(0.25),
-#     median_price="median",
-#     q3_price=lambda x: x.quantile(0.75)
-# ).reset_index()
-
-# # Create a base chart for x-axis
-# base = alt.Chart(stats).encode(
-#     x=alt.X("year_quarter:O", title="Time")
-# )
-
-# # Median line
-# median_line = base.mark_line(color="yellow").encode(
-#     y=alt.Y("median_price:Q", title="Price ($)")
-# )
-
-# # IQR area
-# iqr_area = base.mark_area(opacity=0.1, color="yellow").encode(
-#     y=alt.Y("q1_price:Q", title=None),
-#     y2="q3_price:Q"  # Upper boundary of the IQR
-
-# )
-
-# # Combine median line and IQR area
-# chart = (iqr_area + median_line).properties(
-#     width=600,
-#     height=600,
-#     title="Median Price and IQR Range"
-# )
-
-# # Display chart in Streamlit
-# st.altair_chart(chart, use_container_width=True)
