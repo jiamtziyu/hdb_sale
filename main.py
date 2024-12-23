@@ -4,6 +4,8 @@ import altair as alt
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
+import requests
+import time
 
 # READING THE CSV FILE AND TIDYING UP
 df = pd.read_csv("hdb_data_preprocessed.csv.gz", compression='gzip')
@@ -18,6 +20,8 @@ st.set_page_config(page_title="HDB Resale Dashboard",
                    layout="wide",
                    initial_sidebar_state="collapsed")
 st.title(":house: HDB Resale Value Dashboard")
+
+st.text("Data sourced from the Singapore Department of Statistics (2024), accessed via data.gov.sg")
 st.divider()
 
 
@@ -885,6 +889,7 @@ with st.container():
                     use_container_width=True)
 
 st.divider()
+
 
 # For user to see
 with st.expander("View Data"):
